@@ -1,0 +1,12 @@
+# ForumHub local tooling requirements
+# This is a human-readable setup checklist; Maven does not consume requirements.txt.
+
+Java JDK: 21 or later
+Apache Maven: 3.9 or later
+MySQL Server: 8.0 or later
+Node.js: 20 or later
+npm: included with Node.js
+
+# Install Maven on Windows with:
+# winget install Apache.Maven
+# Then close and reopen PowerShell, and confirm with: mvn --version

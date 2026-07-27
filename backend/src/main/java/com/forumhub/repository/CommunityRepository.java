@@ -1,0 +1,1 @@
+package com.forumhub.repository; import com.forumhub.entity.Community; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface CommunityRepository extends JpaRepository<Community,Long>{ Optional<Community> findByName(String name); }

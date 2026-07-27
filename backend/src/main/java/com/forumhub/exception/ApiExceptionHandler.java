@@ -1,0 +1,2 @@
+package com.forumhub.exception; import org.springframework.http.*; import org.springframework.web.bind.annotation.*; import java.util.*;
+@RestControllerAdvice public class ApiExceptionHandler { @ExceptionHandler(NoSuchElementException.class) ResponseEntity<?> missing(NoSuchElementException e){return ResponseEntity.status(404).body(Map.of("message",e.getMessage()));} @ExceptionHandler(Exception.class) ResponseEntity<?> invalid(Exception e){return ResponseEntity.badRequest().body(Map.of("message","Request could not be processed"));} }

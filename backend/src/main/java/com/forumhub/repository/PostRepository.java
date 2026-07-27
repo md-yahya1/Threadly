@@ -1,0 +1,1 @@
+package com.forumhub.repository; import com.forumhub.entity.Post; import org.springframework.data.domain.*; import org.springframework.data.jpa.repository.JpaRepository; public interface PostRepository extends JpaRepository<Post,Long>{ Page<Post> findByCommunityId(Long id, Pageable page); }

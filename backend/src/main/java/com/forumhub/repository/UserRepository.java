@@ -1,0 +1,1 @@
+package com.forumhub.repository; import com.forumhub.entity.User; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface UserRepository extends JpaRepository<User,Long>{ Optional<User> findByEmail(String email); Optional<User> findByUsername(String username); boolean existsByEmail(String v); boolean existsByUsername(String v); }
