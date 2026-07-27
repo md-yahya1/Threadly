@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:8080/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const TOKEN_KEY = 'forumhub_token';
 const USER_KEY = 'forumhub_user';

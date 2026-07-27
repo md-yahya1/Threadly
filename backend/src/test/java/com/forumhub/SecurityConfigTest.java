@@ -9,13 +9,11 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -45,10 +43,12 @@ public class SecurityConfigTest {
     }
 
     @Test
-    public void testRootEndpointIsPublic() throws Exception {
+    public void testRootAndSpaFallbackRoutesServeIndexHtml() throws Exception {
         mockMvc.perform(get("/"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("UP"));
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/community/1"))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -56,20 +56,16 @@ public class SecurityConfigTest {
         mockMvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("UP"));
-
-        mockMvc.perform(get("/health"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("UP"));
     }
 
     @Test
-    public void testProtectedEndpointFailsWithoutAuth() throws Exception {
+    public void testProtectedApiEndpointFailsWithoutAuth() throws Exception {
         mockMvc.perform(post("/api/posts"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    public void testProtectedEndpointSucceedsWithValidJwt() throws Exception {
+    public void testProtectedApiEndpointSucceedsWithValidJwt() throws Exception {
         User testUser = new User();
         testUser.id = 1L;
         testUser.username = "testuser";
@@ -80,7 +76,6 @@ public class SecurityConfigTest {
 
         String token = tokenProvider.generateToken(1L, "testuser");
 
-        // Requesting protected POST /api/communities with bad body will pass security filter and hit controller (e.g. 400 Bad Request instead of 401/403)
         mockMvc.perform(post("/api/communities")
                         .header("Authorization", "Bearer " + token)
                         .contentType("application/json")
