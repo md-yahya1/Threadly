@@ -17,9 +17,19 @@ public class JwtTokenProvider {
     private final long accessExpirationMs;
 
     public JwtTokenProvider(
-            @Value("${app.jwt.secret}") String secret,
+            @Value("${app.jwt.secret:defaultSecretKeyForLocalDevMustBeAtLeast32BytesLong123456}") String secret,
             @Value("${app.jwt.access-minutes:30}") long accessMinutes) {
-        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(secret);
+        } catch (Exception e) {
+            keyBytes = secret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        }
+        if (keyBytes.length < 32) {
+            byte[] padded = new byte[32];
+            System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);
+            keyBytes = padded;
+        }
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.accessExpirationMs = accessMinutes * 60 * 1000;
     }

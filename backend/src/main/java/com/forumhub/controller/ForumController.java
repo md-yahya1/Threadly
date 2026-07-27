@@ -15,7 +15,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
 public class ForumController {
 
     private final UserRepository users;
