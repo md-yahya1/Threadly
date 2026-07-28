@@ -14,11 +14,27 @@ export default function AuthModal() {
   const handleSubmit = async e => {
     e.preventDefault();
     setErrorMsg('');
+
+    if (authMode === 'register') {
+      if (!form.username || form.username.trim().length < 3 || form.username.trim().length > 30) {
+        setErrorMsg('Username must be between 3 and 30 characters.');
+        return;
+      }
+      if (!form.email || !form.email.includes('@')) {
+        setErrorMsg('Please enter a valid email address.');
+        return;
+      }
+      if (!form.password || form.password.length < 8 || form.password.length > 100) {
+        setErrorMsg('Password must be at least 8 characters long.');
+        return;
+      }
+    }
+
     try {
       if (authMode === 'login') {
         await login(form.username, form.password);
       } else {
-        await register(form.username, form.email, form.password);
+        await register(form.username.trim(), form.email.trim(), form.password);
       }
       setForm({ username: '', email: '', password: '' });
     } catch (err) {
@@ -72,6 +88,8 @@ export default function AuthModal() {
               <input
                 required
                 type="text"
+                minLength={authMode === 'register' ? 3 : 1}
+                maxLength={authMode === 'register' ? 30 : 100}
                 className="form-input"
                 placeholder={authMode === 'login' ? 'e.g. johndoe' : 'e.g. johndoe'}
                 value={form.username}
@@ -99,6 +117,8 @@ export default function AuthModal() {
                 <input
                   required
                   type={showPassword ? 'text' : 'password'}
+                  minLength={authMode === 'register' ? 8 : 1}
+                  maxLength={100}
                   className="form-input"
                   placeholder="••••••••"
                   value={form.password}
@@ -123,4 +143,5 @@ export default function AuthModal() {
       </div>
     </div>
   );
+
 }

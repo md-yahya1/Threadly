@@ -1,3 +1,46 @@
 package com.forumhub.entity;
-import jakarta.persistence.*; import java.time.Instant;
-@Entity @Table(name="posts") public class Post { @Id @GeneratedValue(strategy=GenerationType.IDENTITY) public Long id; @ManyToOne @JoinColumn(name="community_id") public Community community; @ManyToOne @JoinColumn(name="author_id") public User author; @Column(nullable=false,length=300) public String title; @Column(columnDefinition="TEXT") public String content; @Column(name="post_type") public String postType="TEXT"; @Column(name="external_url") public String externalUrl; public int score; @Column(name="comment_count") public int commentCount; public String status="ACTIVE"; public boolean locked; @Column(name="created_at") public Instant createdAt=Instant.now(); }
+
+import jakarta.persistence.*;
+import java.time.Instant;
+
+@Entity
+@Table(name = "posts")
+public class Post {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    public Long id;
+
+    @ManyToOne
+    @JoinColumn(name = "community_id")
+    public Community community;
+
+    @ManyToOne
+    @JoinColumn(name = "author_id")
+    public User author;
+
+    @Column(nullable = false, length = 300)
+    public String title;
+
+    @Column(columnDefinition = "TEXT")
+    public String content;
+
+    @Column(name = "post_type")
+    public String postType = "TEXT";
+
+    @Column(name = "external_url")
+    public String externalUrl;
+
+    public int score;
+
+    @Column(name = "comment_count")
+    public int commentCount;
+
+    public String status = "ACTIVE";
+
+    public boolean locked;
+
+    @Column(name = "created_at")
+    public Instant createdAt = Instant.now();
+}
+

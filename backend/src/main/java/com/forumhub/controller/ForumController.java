@@ -98,7 +98,9 @@ public class ForumController {
         c.name = r.name();
         c.description = r.description();
         c.creator = creator;
-        if (r.visibility() != null) c.visibility = r.visibility();
+        if (r.visibility() != null) {
+            c.visibility = r.visibility();
+        }
         return ResponseEntity.status(201).body(communities.save(c));
     }
 

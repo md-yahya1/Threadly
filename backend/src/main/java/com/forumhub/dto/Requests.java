@@ -3,18 +3,58 @@ package com.forumhub.dto;
 import jakarta.validation.constraints.*;
 
 public final class Requests {
-    private Requests(){}
+
+    private Requests() {}
 
     public record Register(
-        @NotBlank @Size(min=3, max=30) String username,
-        @Email @NotBlank String email,
-        @NotBlank @Size(min=8, max=100) String password
-    ){}
+        @NotBlank(message = "Username is required")
+        @Size(min = 3, max = 30, message = "Username must be between 3 and 30 characters")
+        String username,
+
+        @NotBlank(message = "Email is required")
+        @Email(message = "Email must be a valid email address")
+        String email,
+
+        @NotBlank(message = "Password is required")
+        @Size(min = 8, max = 100, message = "Password must be at least 8 characters long")
+        String password
+    ) {}
+
+    public record RegisterRequest(
+        @NotBlank(message = "Username is required")
+        @Size(min = 3, max = 30, message = "Username must be between 3 and 30 characters")
+        String username,
+
+        @NotBlank(message = "Email is required")
+        @Email(message = "Email must be a valid email address")
+        String email,
+
+        @NotBlank(message = "Password is required")
+        @Size(min = 8, max = 100, message = "Password must be at least 8 characters long")
+        String password
+    ) {}
+
+    public record SignupRequest(
+        @NotBlank(message = "Username is required")
+        @Size(min = 3, max = 30, message = "Username must be between 3 and 30 characters")
+        String username,
+
+        @NotBlank(message = "Email is required")
+        @Email(message = "Email must be a valid email address")
+        String email,
+
+        @NotBlank(message = "Password is required")
+        @Size(min = 8, max = 100, message = "Password must be at least 8 characters long")
+        String password
+    ) {}
 
     public record Login(
-        @NotBlank String usernameOrEmail,
-        @NotBlank String password
-    ){}
+        @NotBlank(message = "Username or email is required")
+        String usernameOrEmail,
+
+        @NotBlank(message = "Password is required")
+        String password
+    ) {}
 
     public record AuthResponse(
         String token,
@@ -22,28 +62,43 @@ public final class Requests {
         String username,
         String email,
         String message
-    ){}
+    ) {}
 
     public record CommunityCreate(
-        @NotBlank @Size(max=50) String name,
-        @NotBlank @Size(max=1000) String description,
+        @NotBlank(message = "Community name is required")
+        @Size(max = 50, message = "Community name cannot exceed 50 characters")
+        String name,
+
+        @NotBlank(message = "Description is required")
+        @Size(max = 1000, message = "Description cannot exceed 1000 characters")
+        String description,
+
         String visibility
-    ){}
+    ) {}
 
     public record PostCreate(
-        @NotNull Long communityId,
-        @NotBlank @Size(max=300) String title,
+        @NotNull(message = "Community ID is required")
+        Long communityId,
+
+        @NotBlank(message = "Title is required")
+        @Size(max = 300, message = "Title cannot exceed 300 characters")
+        String title,
+
         String content,
         String postType,
         String externalUrl
-    ){}
+    ) {}
 
     public record CommentCreate(
-        @NotBlank @Size(max=10000) String content,
+        @NotBlank(message = "Comment content cannot be blank")
+        @Size(max = 10000, message = "Comment content cannot exceed 10000 characters")
+        String content,
+
         Long parentCommentId
-    ){}
+    ) {}
 
     public record VoteRequest(
         int value
-    ){}
+    ) {}
 }
+
