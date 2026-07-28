@@ -1,9 +1,12 @@
 package com.forumhub.exception;
 
-import org.springframework.http.*;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
+import java.util.NoSuchElementException;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
@@ -16,13 +19,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     ResponseEntity<?> invalid(Exception e) {
+        e.printStackTrace();
 
-        e.printStackTrace();   // <-- important
-
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Map.of(
-                        "message", e.getClass().getSimpleName(),
-                        "error", e.getMessage()
-                ));
+        return ResponseEntity.badRequest().body(Map.of(
+                "message", e.getClass().getSimpleName(),
+                "error", e.getMessage()
+        ));
     }
 }
