@@ -119,7 +119,12 @@ export default function PostCard({ post, onVote, onCommentAdded, onOpenProfile, 
 
         {post.externalUrl && (
           <a href={post.externalUrl} target="_blank" rel="noopener noreferrer" className="post-external-link">
-            🔗 {post.externalUrl}
+            <img
+              className="link-favicon"
+              alt=""
+              src={`https://www.google.com/s2/favicons?domain=${encodeURIComponent(post.externalUrl)}&sz=32`}
+            />
+            <span className="link-url">{post.externalUrl.replace(/^https?:\/\//, '')}</span>
           </a>
         )}
 
