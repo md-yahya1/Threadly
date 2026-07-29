@@ -13,16 +13,12 @@ export default function CreatePostModal({ isOpen, onClose, communities = [], onP
 
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!form.communityId) {
-      addToast('Please select a community', 'error');
-      return;
-    }
 
     setIsSubmitting(true);
     try {
       await api.createPost({
         ...form,
-        communityId: Number(form.communityId),
+        communityId: form.communityId ? Number(form.communityId) : null,
         postType: form.externalUrl ? 'LINK' : 'TEXT'
       });
       addToast('Post published successfully!', 'success');
@@ -48,14 +44,13 @@ export default function CreatePostModal({ isOpen, onClose, communities = [], onP
 
         <form onSubmit={handleSubmit} className="post-modal-form">
           <div className="form-group">
-            <label>Choose Community</label>
+            <label>Choose Community (optional)</label>
             <select
-              required
               className="form-select"
               value={form.communityId}
               onChange={e => setForm({ ...form, communityId: e.target.value })}
             >
-              <option value="">Select a community...</option>
+              <option value="">No community (personal post)</option>
               {communities.map(c => (
                 <option key={c.id} value={c.id}>
                   r/{c.name}

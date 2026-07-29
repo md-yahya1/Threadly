@@ -14,6 +14,7 @@ import AuthModal from './components/modals/AuthModal';
 import CreatePostModal from './components/modals/CreatePostModal';
 import CreateCommunityModal from './components/modals/CreateCommunityModal';
 import AccountSettingsModal from './components/modals/AccountSettingsModal';
+import UserProfileModal from './components/modals/UserProfileModal';
 
 import { useAuth } from './context/AuthContext';
 import './App.css';
@@ -34,6 +35,7 @@ export default function App() {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showCreateCommunity, setShowCreateCommunity] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [profileUsername, setProfileUsername] = useState(null);
 
   const { isAuthenticated, openAuthModal } = useAuth();
 
@@ -184,6 +186,7 @@ export default function App() {
                 key={post.id}
                 post={post}
                 onVote={handleVoteApi}
+                onOpenProfile={setProfileUsername}
                 onCommentAdded={() => {
                   setPosts(prev =>
                     prev.map(p => (p.id === post.id ? { ...p, commentCount: p.commentCount + 1 } : p))
@@ -244,6 +247,11 @@ export default function App() {
       <AccountSettingsModal
         isOpen={showSettings}
         onClose={() => setShowSettings(false)}
+      />
+      <UserProfileModal
+        isOpen={!!profileUsername}
+        username={profileUsername}
+        onClose={() => setProfileUsername(null)}
       />
     </div>
   );

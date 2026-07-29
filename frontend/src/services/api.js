@@ -196,5 +196,20 @@ export const api = {
     request('/users/me/password', {
       method: 'PUT',
       body: JSON.stringify({ currentPassword, newPassword })
-    })
+    }),
+
+  getUserProfile: (username) =>
+    request(`/users/${username}`),
+
+  followUser: (username) =>
+    request(`/users/${username}/follow`, { method: 'POST' }),
+
+  unfollowUser: (username) =>
+    request(`/users/${username}/follow`, { method: 'DELETE' }),
+
+  getFollowers: (username, page = 0) =>
+    request(`/users/${username}/followers?page=${page}`),
+
+  getFollowing: (username, page = 0) =>
+    request(`/users/${username}/following?page=${page}`)
 };

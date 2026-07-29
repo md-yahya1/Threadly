@@ -7,7 +7,7 @@ import Avatar from '../common/Avatar';
 import CommentSection from '../comments/CommentSection';
 import './PostCard.css';
 
-export default function PostCard({ post, onVote, onCommentAdded }) {
+export default function PostCard({ post, onVote, onCommentAdded, onOpenProfile }) {
   const { isAuthenticated, openAuthModal } = useAuth();
   const { addToast } = useToast();
   const [userVote, setUserVote] = useState(0); // -1, 0, or 1
@@ -74,10 +74,20 @@ export default function PostCard({ post, onVote, onCommentAdded }) {
       <div className="post-content-column">
         <div className="post-header">
           <div className="post-meta">
-            <Avatar name={post.community?.name || 'C'} size="sm" />
-            <span className="community-tag">r/{post.community?.name || 'community'}</span>
-            <span className="meta-dot">•</span>
-            <span className="author-tag">Posted by u/{post.author?.username || 'anonymous'}</span>
+            <Avatar name={post.community?.name || post.author?.username || 'U'} size="sm" />
+            {post.community && (
+              <>
+                <span className="community-tag">r/{post.community.name}</span>
+                <span className="meta-dot">•</span>
+              </>
+            )}
+            <span
+              className="author-tag"
+              onClick={() => post.author?.username && onOpenProfile?.(post.author.username)}
+              style={{ cursor: post.author?.username && onOpenProfile ? 'pointer' : 'default' }}
+            >
+              Posted by u/{post.author?.username || 'anonymous'}
+            </span>
             <span className="meta-dot">•</span>
             <span className="post-time">{formatRelativeTime(post.createdAt)}</span>
           </div>

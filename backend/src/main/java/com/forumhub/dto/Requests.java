@@ -83,7 +83,6 @@ public final class Requests {
     ) {}
 
     public record PostCreate(
-        @NotNull(message = "Community ID is required")
         Long communityId,
 
         @NotBlank(message = "Title is required")
@@ -132,6 +131,28 @@ public final class Requests {
         String avatarUrl,
         int karma,
         String createdAt
+    ) {}
+
+    public record PublicProfileResponse(
+        Long id,
+        String username,
+        String bio,
+        String avatarUrl,
+        int karma,
+        long followerCount,
+        long followingCount,
+        boolean isFollowing
+    ) {}
+
+    public record UserSummary(
+        Long id,
+        String username,
+        String avatarUrl
+    ) {}
+
+    public record FollowActionResponse(
+        String message,
+        long followerCount
     ) {}
 }
 

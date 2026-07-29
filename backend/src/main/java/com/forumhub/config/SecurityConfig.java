@@ -94,6 +94,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(a -> a
                         .requestMatchers("/api/health", "/api/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/posts/**", "/api/communities/**", "/api/comments/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/users/me").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/*", "/api/users/*/followers", "/api/users/*/following").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().permitAll()
                 )

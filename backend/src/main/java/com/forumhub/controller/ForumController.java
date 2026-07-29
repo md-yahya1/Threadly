@@ -23,6 +23,7 @@ public class ForumController {
     private final PostRepository posts;
     private final CommentRepository comments;
     private final PostVoteRepository postVotes;
+    private final FollowRepository follows;
     private final PasswordEncoder encoder;
     private final JwtTokenProvider tokenProvider;
 
@@ -33,6 +34,7 @@ public class ForumController {
             PostRepository p,
             CommentRepository co,
             PostVoteRepository pv,
+            FollowRepository f,
             PasswordEncoder e,
             JwtTokenProvider tp) {
         this.users = u;
@@ -41,8 +43,16 @@ public class ForumController {
         this.posts = p;
         this.comments = co;
         this.postVotes = pv;
+        this.follows = f;
         this.encoder = e;
         this.tokenProvider = tp;
+    }
+
+    private User getCurrentUserOrNull(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof User)) {
+            return null;
+        }
+        return (User) auth.getPrincipal();
     }
 
     private User getCurrentUser(Authentication auth) {
@@ -128,6 +138,55 @@ public class ForumController {
         return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
     }
 
+    @GetMapping("/users/{username}")
+    public ResponseEntity<?> getPublicProfile(@PathVariable String username, Authentication auth) {
+        User target = users.findByUsername(username).orElseThrow(() -> new NoSuchElementException("User not found"));
+        User me = getCurrentUserOrNull(auth);
+        boolean isFollowing = me != null && follows.existsByIdFollowerIdAndIdFollowingId(me.id, target.id);
+        return ResponseEntity.ok(new PublicProfileResponse(
+                target.id, target.username, target.bio, target.avatarUrl, target.karma,
+                follows.countByIdFollowingId(target.id), follows.countByIdFollowerId(target.id), isFollowing));
+    }
+
+    @PostMapping("/users/{username}/follow")
+    public ResponseEntity<?> followUser(@PathVariable String username, Authentication auth) {
+        User me = getCurrentUser(auth);
+        User target = users.findByUsername(username).orElseThrow(() -> new NoSuchElementException("User not found"));
+        if (me.id.equals(target.id)) {
+            return ResponseEntity.badRequest().body(Map.of("message", "You can't follow yourself"));
+        }
+        if (!follows.existsByIdFollowerIdAndIdFollowingId(me.id, target.id)) {
+            follows.save(new Follow(me, target));
+        }
+        return ResponseEntity.ok(new FollowActionResponse("Following", follows.countByIdFollowingId(target.id)));
+    }
+
+    @DeleteMapping("/users/{username}/follow")
+    public ResponseEntity<?> unfollowUser(@PathVariable String username, Authentication auth) {
+        User me = getCurrentUser(auth);
+        User target = users.findByUsername(username).orElseThrow(() -> new NoSuchElementException("User not found"));
+        follows.deleteByIdFollowerIdAndIdFollowingId(me.id, target.id);
+        return ResponseEntity.ok(new FollowActionResponse("Unfollowed", follows.countByIdFollowingId(target.id)));
+    }
+
+    @GetMapping("/users/{username}/followers")
+    public Page<UserSummary> getFollowers(@PathVariable String username,
+                                           @RequestParam(defaultValue = "0") int page,
+                                           @RequestParam(defaultValue = "20") int size) {
+        User target = users.findByUsername(username).orElseThrow(() -> new NoSuchElementException("User not found"));
+        return follows.findByIdFollowingId(target.id, PageRequest.of(page, Math.min(size, 50)))
+                .map(f -> new UserSummary(f.follower.id, f.follower.username, f.follower.avatarUrl));
+    }
+
+    @GetMapping("/users/{username}/following")
+    public Page<UserSummary> getFollowing(@PathVariable String username,
+                                           @RequestParam(defaultValue = "0") int page,
+                                           @RequestParam(defaultValue = "20") int size) {
+        User target = users.findByUsername(username).orElseThrow(() -> new NoSuchElementException("User not found"));
+        return follows.findByIdFollowerId(target.id, PageRequest.of(page, Math.min(size, 50)))
+                .map(f -> new UserSummary(f.following.id, f.following.username, f.following.avatarUrl));
+    }
+
     @GetMapping("/communities")
     public List<Community> listCommunities() {
         return communities.findAll();
@@ -156,7 +215,10 @@ public class ForumController {
 
     @PostMapping("/posts")
     public ResponseEntity<?> createPost(@Valid @RequestBody PostCreate r, Authentication auth) {
-        Community c = communities.findById(r.communityId()).orElseThrow(() -> new NoSuchElementException("Community not found"));
+        Community c = null;
+        if (r.communityId() != null) {
+            c = communities.findById(r.communityId()).orElseThrow(() -> new NoSuchElementException("Community not found"));
+        }
         User author = getCurrentUser(auth);
 
         Post p = new Post();
