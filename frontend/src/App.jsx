@@ -15,6 +15,7 @@ import CreatePostModal from './components/modals/CreatePostModal';
 import CreateCommunityModal from './components/modals/CreateCommunityModal';
 import AccountSettingsModal from './components/modals/AccountSettingsModal';
 import UserProfileModal from './components/modals/UserProfileModal';
+import SavedItemsModal from './components/modals/SavedItemsModal';
 
 import { useAuth } from './context/AuthContext';
 import './App.css';
@@ -35,7 +36,9 @@ export default function App() {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showCreateCommunity, setShowCreateCommunity] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
   const [profileUsername, setProfileUsername] = useState(null);
+  const [savedPostIds, setSavedPostIds] = useState([]);
 
   const { isAuthenticated, openAuthModal } = useAuth();
 
@@ -65,6 +68,16 @@ export default function App() {
   };
 
   useEffect(loadData, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setSavedPostIds([]);
+      return;
+    }
+    api.getSavedPostIds()
+      .then(ids => setSavedPostIds(ids || []))
+      .catch(() => setSavedPostIds([]));
+  }, [isAuthenticated]);
 
   // Filter & Sort posts dynamically
   const filteredPosts = useMemo(() => {
@@ -98,6 +111,23 @@ export default function App() {
     return communities.find(c => c.id === selectedCommunityId);
   }, [selectedCommunityId, communities]);
 
+  /** No router yet, so "open post" clears filters and scrolls to the card in the feed. */
+  const openPostInFeed = postId => {
+    setSelectedCommunityId(null);
+    setSearchQuery('');
+    setTimeout(() => {
+      const el = document.getElementById(`post-${postId}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('post-highlight');
+      setTimeout(() => el.classList.remove('post-highlight'), 2000);
+    }, 60);
+  };
+
+  const handleSaveChange = (postId, saved) => {
+    setSavedPostIds(prev => (saved ? [...prev, postId] : prev.filter(id => id !== postId)));
+  };
+
   const handleVoteApi = async (postId, value, callback) => {
     try {
       const res = await api.votePost(postId, value);
@@ -118,6 +148,9 @@ export default function App() {
         onOpenCreatePost={() => setShowCreatePost(true)}
         onOpenCreateCommunity={() => setShowCreateCommunity(true)}
         onOpenSettings={() => setShowSettings(true)}
+        onOpenProfile={setProfileUsername}
+        onOpenSaved={() => setShowSaved(true)}
+        onOpenPost={openPostInFeed}
       />
 
       <main className="app-main-layout">
@@ -130,6 +163,7 @@ export default function App() {
           communities={communities}
           onOpenCreatePost={() => setShowCreatePost(true)}
           onOpenCreateCommunity={() => setShowCreateCommunity(true)}
+          onOpenSaved={() => setShowSaved(true)}
         />
 
         {/* Center Feed */}
@@ -187,6 +221,8 @@ export default function App() {
                 post={post}
                 onVote={handleVoteApi}
                 onOpenProfile={setProfileUsername}
+                initialSaved={savedPostIds.includes(post.id)}
+                onSaveChange={handleSaveChange}
                 onCommentAdded={() => {
                   setPosts(prev =>
                     prev.map(p => (p.id === post.id ? { ...p, commentCount: p.commentCount + 1 } : p))
@@ -252,6 +288,13 @@ export default function App() {
         isOpen={!!profileUsername}
         username={profileUsername}
         onClose={() => setProfileUsername(null)}
+        onOpenPost={openPostInFeed}
+      />
+      <SavedItemsModal
+        isOpen={showSaved}
+        onClose={() => setShowSaved(false)}
+        onOpenPost={openPostInFeed}
+        onOpenProfile={setProfileUsername}
       />
     </div>
   );

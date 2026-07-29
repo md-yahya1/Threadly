@@ -130,6 +130,8 @@ public final class Requests {
         String bio,
         String avatarUrl,
         int karma,
+        int postKarma,
+        int commentKarma,
         String createdAt
     ) {}
 
@@ -139,9 +141,14 @@ public final class Requests {
         String bio,
         String avatarUrl,
         int karma,
+        int postKarma,
+        int commentKarma,
+        long postCount,
+        long commentCount,
         long followerCount,
         long followingCount,
-        boolean isFollowing
+        boolean isFollowing,
+        String createdAt
     ) {}
 
     public record UserSummary(
@@ -153,6 +160,44 @@ public final class Requests {
     public record FollowActionResponse(
         String message,
         long followerCount
+    ) {}
+
+    public record CommentResponse(
+        Long id,
+        Long postId,
+        String postTitle,
+        Long parentCommentId,
+        String content,
+        int score,
+        int userVote,
+        boolean saved,
+        String createdAt,
+        UserSummary author
+    ) {}
+
+    public record VoteResponse(
+        Long id,
+        int score,
+        int userVote
+    ) {}
+
+    public record SaveActionResponse(
+        String message,
+        boolean saved
+    ) {}
+
+    public record NotificationResponse(
+        Long id,
+        String type,
+        String message,
+        Long referenceId,
+        boolean read,
+        String createdAt,
+        UserSummary actor
+    ) {}
+
+    public record UnreadCountResponse(
+        long unreadCount
     ) {}
 }
 

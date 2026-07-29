@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowBigUp, ArrowBigDown, MessageSquare, Bookmark, Share2, MoreHorizontal } from 'lucide-react';
+import { api } from '../../services/api';
 import { formatRelativeTime } from '../../utils/time';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -7,14 +8,16 @@ import Avatar from '../common/Avatar';
 import CommentSection from '../comments/CommentSection';
 import './PostCard.css';
 
-export default function PostCard({ post, onVote, onCommentAdded, onOpenProfile }) {
+export default function PostCard({ post, onVote, onCommentAdded, onOpenProfile, initialSaved = false, onSaveChange }) {
   const { isAuthenticated, openAuthModal } = useAuth();
   const { addToast } = useToast();
   const [userVote, setUserVote] = useState(0); // -1, 0, or 1
   const [score, setScore] = useState(post.score || 0);
-  const [isSaved, setIsSaved] = useState(false);
+  const [isSaved, setIsSaved] = useState(initialSaved);
   const [showComments, setShowComments] = useState(false);
   const [commentCount, setCommentCount] = useState(post.commentCount || 0);
+
+  useEffect(() => setIsSaved(initialSaved), [initialSaved]);
 
   const handleVoteClick = (direction) => {
     if (!isAuthenticated) {
@@ -35,13 +38,26 @@ export default function PostCard({ post, onVote, onCommentAdded, onOpenProfile }
     });
   };
 
-  const handleSaveToggle = () => {
+  const handleSaveToggle = async () => {
     if (!isAuthenticated) {
       openAuthModal('login');
       return;
     }
-    setIsSaved(!isSaved);
-    addToast(isSaved ? 'Post removed from saved.' : 'Post saved!', isSaved ? 'info' : 'success');
+
+    const next = !isSaved;
+    setIsSaved(next);
+    try {
+      if (next) {
+        await api.savePost(post.id);
+      } else {
+        await api.unsavePost(post.id);
+      }
+      addToast(next ? 'Post saved!' : 'Post removed from saved.', next ? 'success' : 'info');
+      onSaveChange?.(post.id, next);
+    } catch (err) {
+      setIsSaved(!next);
+      addToast(err.message || 'Could not update saved posts', 'error');
+    }
   };
 
   const handleShare = () => {
@@ -127,6 +143,7 @@ export default function PostCard({ post, onVote, onCommentAdded, onOpenProfile }
         {showComments && (
           <CommentSection
             postId={post.id}
+            onOpenProfile={onOpenProfile}
             onCommentAdded={() => {
               setCommentCount(prev => prev + 1);
               if (onCommentAdded) onCommentAdded(post.id);
