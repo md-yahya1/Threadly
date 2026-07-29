@@ -1,72 +1,73 @@
 :root {
-  /* Color Palette - Light Theme */
-  --color-primary: #4f46e5;
-  --color-primary-hover: #4338ca;
-  --color-primary-light: #eef2ff;
-  --color-secondary: #0ea5e9;
-  --color-accent: #f97316;
+  /* Color Palette - Light Theme (Threadly "Coral Reef" theme) */
+  --color-primary: #0d9488;
+  --color-primary-hover: #0f766e;
+  --color-primary-light: #ccfbf1;
+  --color-secondary: #7c3aed;
+  --color-accent: #fb7185;
   
-  --color-background: #f8fafc;
+  --color-background: #faf9f7;
   --color-surface: #ffffff;
-  --color-surface-hover: #f1f5f9;
-  --color-surface-active: #e2e8f0;
+  --color-surface-hover: #f2f1ee;
+  --color-surface-active: #e7e5e0;
   
-  --color-text-primary: #0f172a;
-  --color-text-secondary: #475569;
-  --color-text-muted: #94a3b8;
-  --color-border: #e2e8f0;
+  --color-text-primary: #1c1917;
+  --color-text-secondary: #57534e;
+  --color-text-muted: #a29e97;
+  --color-border: #e7e5e0;
   
-  --color-success: #10b981;
-  --color-success-bg: #ecfdf5;
-  --color-danger: #ef4444;
-  --color-danger-bg: #fef2f2;
+  --color-success: #16a34a;
+  --color-success-bg: #f0fdf4;
+  --color-danger: #e11d48;
+  --color-danger-bg: #fff1f2;
   
-  --upvote-color: #ff4500;
-  --upvote-bg: #fff2ed;
-  --downvote-color: #6366f1;
-  --downvote-bg: #eef2ff;
+  --upvote-color: #fb7185;
+  --upvote-bg: #fff1f2;
+  --downvote-color: #7c3aed;
+  --downvote-bg: #f5f3ff;
   
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-modal: 0 20px 25px -5px rgb(0 0 0 / 0.25), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --shadow-sm: 0 1px 2px 0 rgb(28 25 23 / 0.06);
+  --shadow-md: 0 4px 6px -1px rgb(28 25 23 / 0.1), 0 2px 4px -2px rgb(28 25 23 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(28 25 23 / 0.1), 0 4px 6px -4px rgb(28 25 23 / 0.1);
+  --shadow-modal: 0 20px 25px -5px rgb(28 25 23 / 0.25), 0 8px 10px -6px rgb(28 25 23 / 0.1);
   
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
   --radius-full: 9999px;
   
-  --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --font-family-display: 'Sora', 'Plus Jakarta Sans', system-ui, sans-serif;
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 [data-theme="dark"] {
-  --color-primary: #6366f1;
-  --color-primary-hover: #818cf8;
-  --color-primary-light: #1e1b4b;
-  --color-secondary: #38bdf8;
-  --color-accent: #fb923c;
+  --color-primary: #2dd4bf;
+  --color-primary-hover: #5eead4;
+  --color-primary-light: #134e4a;
+  --color-secondary: #a78bfa;
+  --color-accent: #fda4af;
   
-  --color-background: #0b0f17;
-  --color-surface: #151c28;
-  --color-surface-hover: #1e293b;
-  --color-surface-active: #334155;
+  --color-background: #12100e;
+  --color-surface: #1c1a17;
+  --color-surface-hover: #29261f;
+  --color-surface-active: #3a352b;
   
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #94a3b8;
-  --color-text-muted: #64748b;
-  --color-border: #1e293b;
+  --color-text-primary: #faf9f7;
+  --color-text-secondary: #b3ada2;
+  --color-text-muted: #736c60;
+  --color-border: #322e26;
   
-  --color-success: #34d399;
-  --color-success-bg: #064e3b;
-  --color-danger: #f87171;
-  --color-danger-bg: #7f1d1d;
+  --color-success: #4ade80;
+  --color-success-bg: #14532d;
+  --color-danger: #fb7185;
+  --color-danger-bg: #4c0519;
   
-  --upvote-color: #ff5722;
-  --upvote-bg: #3b1910;
-  --downvote-color: #818cf8;
-  --downvote-bg: #1e1b4b;
+  --upvote-color: #fda4af;
+  --upvote-bg: #4c0519;
+  --downvote-color: #a78bfa;
+  --downvote-bg: #2e1065;
   
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.4);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.5);
