@@ -1,17 +1,19 @@
-import React, { useEffect, useState } from 'react';
-import { Send, MessageSquare } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Send, MessageSquare, X } from 'lucide-react';
 import { api } from '../../services/api';
-import { formatRelativeTime } from '../../utils/time';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import Avatar from '../common/Avatar';
+import CommentCard from './CommentCard';
 import './CommentSection.css';
 
-export default function CommentSection({ postId, onCommentAdded }) {
+export default function CommentSection({ postId, onCommentAdded, onOpenProfile }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [replyTo, setReplyTo] = useState(null);
+  const [replyText, setReplyText] = useState('');
 
   const { isAuthenticated, openAuthModal, user } = useAuth();
   const { addToast } = useToast();
@@ -31,34 +33,102 @@ export default function CommentSection({ postId, onCommentAdded }) {
     return () => { isMounted = false; };
   }, [postId]);
 
-  const handleSubmit = async e => {
-    e.preventDefault();
+  // Flat list -> parent/child threads, so nested replies render underneath their parent.
+  const childrenByParent = useMemo(() => {
+    const map = new Map();
+    comments.forEach(c => {
+      const key = c.parentCommentId ?? 'root';
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(c);
+    });
+    return map;
+  }, [comments]);
+
+  const submitComment = async (content, parentCommentId) => {
     if (!isAuthenticated) {
       openAuthModal('login');
-      return;
+      return false;
     }
-    if (!text.trim()) return;
+    if (!content.trim()) return false;
 
     setIsSubmitting(true);
     try {
-      const newComment = await api.addComment(postId, text);
+      const newComment = await api.addComment(postId, content, parentCommentId);
       setComments(prev => [...prev, newComment]);
-      setText('');
-      addToast('Comment added!', 'success');
+      addToast(parentCommentId ? 'Reply posted!' : 'Comment added!', 'success');
       if (onCommentAdded) onCommentAdded();
+      return true;
     } catch (err) {
       addToast(err.message || 'Failed to post comment', 'error');
+      return false;
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleSubmit = async e => {
+    e.preventDefault();
+    if (await submitComment(text, null)) setText('');
+  };
+
+  const handleReplySubmit = async e => {
+    e.preventDefault();
+    if (await submitComment(replyText, replyTo.id)) {
+      setReplyText('');
+      setReplyTo(null);
+    }
+  };
+
+  const handleReplyClick = comment => {
+    if (!isAuthenticated) {
+      openAuthModal('login');
+      return;
+    }
+    setReplyText('');
+    setReplyTo(prev => (prev?.id === comment.id ? null : comment));
+  };
+
+  const renderThread = (parentKey, depth) =>
+    (childrenByParent.get(parentKey) || []).map(c => (
+      <CommentCard
+        key={c.id}
+        comment={c}
+        depth={depth}
+        onOpenProfile={onOpenProfile}
+        onReplyClick={handleReplyClick}
+        replyBox={
+          replyTo?.id === c.id ? (
+            <form className="comment-form reply-form" onSubmit={handleReplySubmit}>
+              <input
+                autoFocus
+                type="text"
+                className="comment-input"
+                placeholder={`Reply to u/${c.author?.username || 'anonymous'}...`}
+                value={replyText}
+                onChange={e => setReplyText(e.target.value)}
+                disabled={isSubmitting}
+              />
+              <button type="submit" className="comment-submit-btn" disabled={!replyText.trim() || isSubmitting}>
+                <Send size={14} />
+                <span>{isSubmitting ? 'Posting...' : 'Reply'}</span>
+              </button>
+              <button type="button" className="comment-cancel-btn" onClick={() => setReplyTo(null)} aria-label="Cancel reply">
+                <X size={14} />
+              </button>
+            </form>
+          ) : null
+        }
+      >
+        {renderThread(c.id, depth + 1)}
+      </CommentCard>
+    ));
 
   return (
     <div className="comment-section">
       {/* Input Form */}
       {isAuthenticated ? (
         <form className="comment-form" onSubmit={handleSubmit}>
-          <Avatar name={user?.username} size="sm" />
+          <Avatar name={user?.username} src={user?.avatarUrl} size="sm" />
           <input
             type="text"
             className="comment-input"
@@ -87,23 +157,7 @@ export default function CommentSection({ postId, onCommentAdded }) {
           <div className="skeleton-line short skeleton" />
         </div>
       ) : comments.length ? (
-        <div className="comments-list">
-          {comments.map(c => (
-            <div key={c.id} className="comment-item">
-              <div className="thread-line-container">
-                <Avatar name={c.author?.username} size="sm" />
-                <div className="thread-line" />
-              </div>
-              <div className="comment-body-wrapper">
-                <div className="comment-header">
-                  <span className="comment-author">u/{c.author?.username || 'anonymous'}</span>
-                  <span className="comment-time">{formatRelativeTime(c.createdAt)}</span>
-                </div>
-                <p className="comment-text">{c.content}</p>
-              </div>
-            </div>
-          ))}
-        </div>
+        <div className="comments-list">{renderThread('root', 0)}</div>
       ) : (
         <div className="empty-comments">
           <MessageSquare size={20} color="var(--color-text-muted)" />

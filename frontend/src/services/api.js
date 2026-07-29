@@ -177,10 +177,16 @@ export const api = {
   fetchComments: (postId) =>
     request(`/posts/${postId}/comments`),
 
-  addComment: (postId, content) =>
+  addComment: (postId, content, parentCommentId = null) =>
     request(`/posts/${postId}/comments`, {
       method: 'POST',
-      body: JSON.stringify({ content })
+      body: JSON.stringify({ content, parentCommentId })
+    }),
+
+  voteComment: (commentId, value) =>
+    request(`/comments/${commentId}/vote`, {
+      method: 'POST',
+      body: JSON.stringify({ value })
     }),
 
   getProfile: () =>
@@ -211,5 +217,44 @@ export const api = {
     request(`/users/${username}/followers?page=${page}`),
 
   getFollowing: (username, page = 0) =>
-    request(`/users/${username}/following?page=${page}`)
+    request(`/users/${username}/following?page=${page}`),
+
+  getUserPosts: (username, page = 0) =>
+    request(`/users/${username}/posts?page=${page}`),
+
+  getUserComments: (username, page = 0) =>
+    request(`/users/${username}/comments?page=${page}`),
+
+  savePost: (postId) =>
+    request(`/posts/${postId}/save`, { method: 'POST' }),
+
+  unsavePost: (postId) =>
+    request(`/posts/${postId}/save`, { method: 'DELETE' }),
+
+  saveComment: (commentId) =>
+    request(`/comments/${commentId}/save`, { method: 'POST' }),
+
+  unsaveComment: (commentId) =>
+    request(`/comments/${commentId}/save`, { method: 'DELETE' }),
+
+  getSavedPostIds: () =>
+    request('/users/me/saved/post-ids'),
+
+  getSavedPosts: (page = 0) =>
+    request(`/users/me/saved/posts?page=${page}`),
+
+  getSavedComments: (page = 0) =>
+    request(`/users/me/saved/comments?page=${page}`),
+
+  getNotifications: (page = 0) =>
+    request(`/notifications?page=${page}`),
+
+  getUnreadNotificationCount: () =>
+    request('/notifications/unread-count'),
+
+  markNotificationRead: (id) =>
+    request(`/notifications/${id}/read`, { method: 'PUT' }),
+
+  markAllNotificationsRead: () =>
+    request('/notifications/read-all', { method: 'PUT' })
 };

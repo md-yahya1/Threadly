@@ -110,16 +110,6 @@
   color: var(--color-text-primary);
 }
 
-.notif-dot {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 8px;
-  height: 8px;
-  background-color: var(--color-accent);
-  border-radius: var(--radius-full);
-  border: 2px solid var(--color-surface);
-}
 
 .auth-buttons {
   display: flex;

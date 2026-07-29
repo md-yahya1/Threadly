@@ -11,7 +11,8 @@ export default function LeftSidebar({
   setSelectedCommunity,
   communities,
   onOpenCreatePost,
-  onOpenCreateCommunity
+  onOpenCreateCommunity,
+  onOpenSaved
 }) {
   const { isAuthenticated, openAuthModal } = useAuth();
 
@@ -48,6 +49,11 @@ export default function LeftSidebar({
         >
           <TrendingUp size={18} />
           <span>Popular</span>
+        </button>
+
+        <button className="nav-item" onClick={() => handleAction(onOpenSaved)}>
+          <Bookmark size={18} />
+          <span>Saved</span>
         </button>
       </nav>
 

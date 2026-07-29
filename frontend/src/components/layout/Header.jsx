@@ -1,11 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Sun, Moon, Bell, Plus, LogOut, User, MessageSquare, Settings } from 'lucide-react';
+import { Search, Sun, Moon, Plus, LogOut, User, MessageSquare, Settings, Bookmark } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import Avatar from '../common/Avatar';
+import NotificationsMenu from './NotificationsMenu';
 import './Header.css';
 
-export default function Header({ searchQuery, setSearchQuery, onOpenCreatePost, onOpenCreateCommunity, onOpenSettings }) {
+export default function Header({
+  searchQuery,
+  setSearchQuery,
+  onOpenCreatePost,
+  onOpenCreateCommunity,
+  onOpenSettings,
+  onOpenProfile,
+  onOpenSaved,
+  onOpenPost
+}) {
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -54,10 +64,7 @@ export default function Header({ searchQuery, setSearchQuery, onOpenCreatePost, 
         </button>
 
         {isAuthenticated && (
-          <button className="icon-btn notif-btn" title="Notifications" onClick={() => alert('Notifications feature coming soon!')}>
-            <Bell size={18} />
-            <span className="notif-dot" />
-          </button>
+          <NotificationsMenu onOpenProfile={onOpenProfile} onOpenPost={onOpenPost} />
         )}
 
         {isAuthenticated ? (
@@ -76,6 +83,17 @@ export default function Header({ searchQuery, setSearchQuery, onOpenCreatePost, 
                     <span className="dropdown-email">{user?.email}</span>
                   </div>
                 </div>
+
+                <div className="dropdown-divider" />
+
+                <button className="dropdown-item" onClick={() => { setDropdownOpen(false); onOpenProfile(user?.username); }}>
+                  <User size={16} />
+                  <span>My Profile</span>
+                </button>
+                <button className="dropdown-item" onClick={() => { setDropdownOpen(false); onOpenSaved(); }}>
+                  <Bookmark size={16} />
+                  <span>Saved</span>
+                </button>
 
                 <div className="dropdown-divider" />
 

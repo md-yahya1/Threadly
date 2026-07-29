@@ -163,3 +163,16 @@
   color: var(--color-primary);
   background-color: var(--color-primary-light);
 }
+
+.post-card.post-highlight {
+  animation: postHighlight 2s ease-out;
+}
+
+@keyframes postHighlight {
+  0% {
+    box-shadow: 0 0 0 3px var(--color-primary);
+  }
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
+}

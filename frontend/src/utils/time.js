@@ -1,3 +1,8 @@
+export function formatJoinDate(dateString) {
+  if (!dateString) return 'unknown';
+  return new Date(dateString).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
 export function formatRelativeTime(dateString) {
   if (!dateString) return 'recently';
   const date = new Date(dateString);
