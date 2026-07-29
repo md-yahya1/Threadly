@@ -58,10 +58,16 @@ public final class Requests {
 
     public record AuthResponse(
         String token,
+        String refreshToken,
         Long id,
         String username,
         String email,
         String message
+    ) {}
+
+    public record RefreshRequest(
+        @NotBlank(message = "Refresh token is required")
+        String refreshToken
     ) {}
 
     public record CommunityCreate(

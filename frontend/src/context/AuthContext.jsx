@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { api, getStoredToken, getStoredUser, setSession, clearSession } from '../services/api';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { api, getStoredToken, getStoredUser, setSession, clearSession, setSessionExpiredHandler } from '../services/api';
 import { useToast } from './ToastContext';
 
 const AuthContext = createContext();
@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
       const userInfo = { id: data.id, username: data.username, email: data.email };
       setUser(userInfo);
       setToken(data.token);
-      setSession(data.token, userInfo);
+      setSession(data.token, data.refreshToken, userInfo);
       closeAuthModal();
       addToast(`Welcome back, u/${data.username}!`, 'success');
       return data;
@@ -48,7 +48,7 @@ export function AuthProvider({ children }) {
       const userInfo = { id: data.id, username: data.username, email: data.email };
       setUser(userInfo);
       setToken(data.token);
-      setSession(data.token, userInfo);
+      setSession(data.token, data.refreshToken, userInfo);
       closeAuthModal();
       addToast(`Account created! Welcome to Threadly, u/${data.username}.`, 'success');
       return data;
@@ -63,7 +63,7 @@ export function AuthProvider({ children }) {
   const updateUser = useCallback((patch) => {
     setUser(prev => {
       const next = { ...prev, ...patch };
-      setSession(getStoredToken(), next);
+      setSession(getStoredToken(), null, next);
       return next;
     });
   }, []);
@@ -74,6 +74,17 @@ export function AuthProvider({ children }) {
     clearSession();
     addToast('You have signed out.', 'info');
   }, [addToast]);
+
+  // When a silent token refresh fails (refresh token itself expired/invalid), api.js calls this
+  // so the app can drop back to a logged-out state and prompt the person to sign back in.
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      setUser(null);
+      setToken('');
+      addToast('Your session has expired. Please sign in again.', 'info');
+      openAuthModal('login');
+    });
+  }, [addToast, openAuthModal]);
 
   return (
     <AuthContext.Provider

@@ -15,10 +15,12 @@ public class JwtTokenProvider {
 
     private final SecretKey key;
     private final long accessExpirationMs;
+    private final long refreshExpirationMs;
 
     public JwtTokenProvider(
             @Value("${app.jwt.secret:defaultSecretKeyForLocalDevMustBeAtLeast32BytesLong123456}") String secret,
-            @Value("${app.jwt.access-minutes:30}") long accessMinutes) {
+            @Value("${app.jwt.access-minutes:30}") long accessMinutes,
+            @Value("${app.jwt.refresh-days:14}") long refreshDays) {
         byte[] keyBytes;
         try {
             keyBytes = Decoders.BASE64.decode(secret);
@@ -32,6 +34,7 @@ public class JwtTokenProvider {
         }
         this.key = Keys.hmacShaKeyFor(keyBytes);
         this.accessExpirationMs = accessMinutes * 60 * 1000;
+        this.refreshExpirationMs = refreshDays * 24 * 60 * 60 * 1000;
     }
 
     public String generateToken(Long userId, String username) {
@@ -41,6 +44,21 @@ public class JwtTokenProvider {
         return Jwts.builder()
                 .subject(username)
                 .claim("userId", userId)
+                .claim("type", "access")
+                .issuedAt(now)
+                .expiration(expiryDate)
+                .signWith(key)
+                .compact();
+    }
+
+    public String generateRefreshToken(Long userId, String username) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshExpirationMs);
+
+        return Jwts.builder()
+                .subject(username)
+                .claim("userId", userId)
+                .claim("type", "refresh")
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
@@ -48,20 +66,32 @@ public class JwtTokenProvider {
     }
 
     public String getUsernameFromToken(String token) {
-        Claims claims = Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
-        return claims.getSubject();
+        return parseClaims(token).getSubject();
     }
 
     public boolean validateToken(String token) {
         try {
-            Jwts.parser().verifyWith(key).build().parseSignedClaims(token);
-            return true;
+            Claims claims = parseClaims(token);
+            return "access".equals(claims.get("type", String.class));
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public boolean validateRefreshToken(String token) {
+        try {
+            Claims claims = parseClaims(token);
+            return "refresh".equals(claims.get("type", String.class));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

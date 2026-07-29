@@ -69,7 +69,8 @@ public class ForumController {
         users.save(u);
 
         String token = tokenProvider.generateToken(u.id, u.username);
-        return ResponseEntity.status(201).body(new AuthResponse(token, u.id, u.username, u.email, "Registration successful"));
+        String refreshToken = tokenProvider.generateRefreshToken(u.id, u.username);
+        return ResponseEntity.status(201).body(new AuthResponse(token, refreshToken, u.id, u.username, u.email, "Registration successful"));
     }
 
     @PostMapping("/auth/login")
@@ -80,7 +81,23 @@ public class ForumController {
         }
         User u = uOpt.get();
         String token = tokenProvider.generateToken(u.id, u.username);
-        return ResponseEntity.ok(new AuthResponse(token, u.id, u.username, u.email, "Login successful"));
+        String refreshToken = tokenProvider.generateRefreshToken(u.id, u.username);
+        return ResponseEntity.ok(new AuthResponse(token, refreshToken, u.id, u.username, u.email, "Login successful"));
+    }
+
+    @PostMapping("/auth/refresh")
+    public ResponseEntity<?> refresh(@Valid @RequestBody RefreshRequest r) {
+        if (!tokenProvider.validateRefreshToken(r.refreshToken())) {
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid or expired refresh token"));
+        }
+        String username = tokenProvider.getUsernameFromToken(r.refreshToken());
+        User u = users.findByUsername(username).orElse(null);
+        if (u == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "Invalid or expired refresh token"));
+        }
+        String newAccessToken = tokenProvider.generateToken(u.id, u.username);
+        String newRefreshToken = tokenProvider.generateRefreshToken(u.id, u.username);
+        return ResponseEntity.ok(new AuthResponse(newAccessToken, newRefreshToken, u.id, u.username, u.email, "Token refreshed"));
     }
 
     @GetMapping("/users/me")

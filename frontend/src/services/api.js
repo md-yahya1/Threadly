@@ -1,10 +1,21 @@
 const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
 const TOKEN_KEY = 'forumhub_token';
+const REFRESH_TOKEN_KEY = 'forumhub_refresh_token';
 const USER_KEY = 'forumhub_user';
+
+// Set by AuthContext so api.js can react when refresh fails (session truly dead).
+let onSessionExpired = () => {};
+export function setSessionExpiredHandler(fn) {
+  onSessionExpired = fn;
+}
 
 export function getStoredToken() {
   return localStorage.getItem(TOKEN_KEY) || '';
+}
+
+export function getStoredRefreshToken() {
+  return localStorage.getItem(REFRESH_TOKEN_KEY) || '';
 }
 
 export function getStoredUser() {
@@ -16,17 +27,52 @@ export function getStoredUser() {
   }
 }
 
-export function setSession(token, user) {
+export function setSession(token, refreshToken, user) {
   if (token) localStorage.setItem(TOKEN_KEY, token);
+  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
   if (user) localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
 export function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
 }
 
-async function request(endpoint, options = {}) {
+// Dedupe concurrent refresh attempts so multiple failed requests don't each trigger their own refresh call.
+let refreshInFlight = null;
+
+async function refreshAccessToken() {
+  if (refreshInFlight) return refreshInFlight;
+
+  refreshInFlight = (async () => {
+    const refreshToken = getStoredRefreshToken();
+    if (!refreshToken) throw new Error('No refresh token available');
+
+    const response = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken })
+    });
+
+    if (!response.ok) throw new Error('Refresh token expired or invalid');
+
+    const data = await response.json();
+    const user = getStoredUser();
+    setSession(data.token, data.refreshToken, user);
+    return data.token;
+  })();
+
+  try {
+    return await refreshInFlight;
+  } finally {
+    refreshInFlight = null;
+  }
+}
+
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/refresh'];
+
+async function request(endpoint, options = {}, isRetry = false) {
   const token = getStoredToken();
   const headers = {
     'Content-Type': 'application/json',
@@ -42,6 +88,24 @@ async function request(endpoint, options = {}) {
       ...options,
       headers
     });
+
+    // A 401/403 on an authenticated call (never on login/register/refresh itself) means the
+    // access token likely expired. Try a silent refresh once, then retry the original call.
+    if (
+      (response.status === 401 || response.status === 403) &&
+      !isRetry &&
+      token &&
+      !AUTH_ENDPOINTS.includes(endpoint)
+    ) {
+      try {
+        await refreshAccessToken();
+        return request(endpoint, options, true);
+      } catch (refreshErr) {
+        clearSession();
+        onSessionExpired();
+        throw new Error('Your session has expired. Please sign in again.');
+      }
+    }
 
     const data = await response.json().catch(() => null);
 
