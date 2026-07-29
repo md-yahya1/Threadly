@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowBigUp, ArrowBigDown, Bookmark, Reply } from 'lucide-react';
+import { ArrowBigUp, ArrowBigDown, Bookmark, Reply, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '../../services/api';
 import { formatRelativeTime } from '../../utils/time';
 import { useAuth } from '../../context/AuthContext';
@@ -14,8 +14,10 @@ export default function CommentCard({
   onReplyClick,
   onSaveChange,
   replyBox,
+  replyCount = 0,
   children
 }) {
+  const [collapsed, setCollapsed] = useState(false);
   const { isAuthenticated, openAuthModal } = useAuth();
   const { addToast } = useToast();
   const [userVote, setUserVote] = useState(comment.userVote || 0);
@@ -79,12 +81,26 @@ export default function CommentCard({
   return (
     <div className="comment-item" style={depth ? { marginLeft: Math.min(depth, 4) * 20 } : undefined}>
       <div className="thread-line-container">
-        <Avatar name={comment.author?.username} src={comment.author?.avatarUrl} size="sm" />
-        <div className="thread-line" />
+        <button
+          className="thread-collapse-btn"
+          onClick={() => setCollapsed(prev => !prev)}
+          aria-label={collapsed ? 'Expand thread' : 'Collapse thread'}
+          title={collapsed ? 'Expand thread' : 'Collapse thread'}
+        >
+          <Avatar name={comment.author?.username} src={comment.author?.avatarUrl} size="sm" />
+        </button>
+        {!collapsed && <div className="thread-line" onClick={() => setCollapsed(true)} />}
       </div>
 
       <div className="comment-body-wrapper">
         <div className="comment-header">
+          <button
+            className="thread-toggle-caret"
+            onClick={() => setCollapsed(prev => !prev)}
+            aria-label={collapsed ? 'Expand thread' : 'Collapse thread'}
+          >
+            {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+          </button>
           <span
             className="comment-author"
             onClick={() => comment.author?.username && onOpenProfile?.(comment.author.username)}
@@ -93,46 +109,56 @@ export default function CommentCard({
             u/{comment.author?.username || 'anonymous'}
           </span>
           <span className="comment-time">{formatRelativeTime(comment.createdAt)}</span>
-        </div>
-
-        {showPostTitle && comment.postTitle && (
-          <span className="comment-context">on “{comment.postTitle}”</span>
-        )}
-
-        <p className="comment-text">{comment.content}</p>
-
-        <div className="comment-actions">
-          <button
-            className={`comment-action-btn ${userVote === 1 ? 'up' : ''}`}
-            onClick={() => handleVote(1)}
-            aria-label="Upvote comment"
-          >
-            <ArrowBigUp size={15} />
-          </button>
-          <span className={`comment-score ${userVote === 1 ? 'up' : userVote === -1 ? 'down' : ''}`}>{score}</span>
-          <button
-            className={`comment-action-btn ${userVote === -1 ? 'down' : ''}`}
-            onClick={() => handleVote(-1)}
-            aria-label="Downvote comment"
-          >
-            <ArrowBigDown size={15} />
-          </button>
-
-          {onReplyClick && (
-            <button className="comment-action-btn text" onClick={() => onReplyClick(comment)}>
-              <Reply size={13} />
-              <span>Reply</span>
-            </button>
+          {collapsed && (
+            <span className="comment-collapsed-summary">
+              {score} point{score === 1 ? '' : 's'}
+              {replyCount > 0 ? ` · ${replyCount} repl${replyCount === 1 ? 'y' : 'ies'} hidden` : ''}
+            </span>
           )}
-
-          <button className={`comment-action-btn text ${saved ? 'saved' : ''}`} onClick={handleSave}>
-            <Bookmark size={13} fill={saved ? 'currentColor' : 'none'} />
-            <span>{saved ? 'Saved' : 'Save'}</span>
-          </button>
         </div>
 
-        {replyBox}
-        {children}
+        {!collapsed && (
+          <>
+            {showPostTitle && comment.postTitle && (
+              <span className="comment-context">on “{comment.postTitle}”</span>
+            )}
+
+            <p className="comment-text">{comment.content}</p>
+
+            <div className="comment-actions">
+              <button
+                className={`comment-action-btn ${userVote === 1 ? 'up' : ''}`}
+                onClick={() => handleVote(1)}
+                aria-label="Upvote comment"
+              >
+                <ArrowBigUp size={15} />
+              </button>
+              <span className={`comment-score ${userVote === 1 ? 'up' : userVote === -1 ? 'down' : ''}`}>{score}</span>
+              <button
+                className={`comment-action-btn ${userVote === -1 ? 'down' : ''}`}
+                onClick={() => handleVote(-1)}
+                aria-label="Downvote comment"
+              >
+                <ArrowBigDown size={15} />
+              </button>
+
+              {onReplyClick && (
+                <button className="comment-action-btn text" onClick={() => onReplyClick(comment)}>
+                  <Reply size={13} />
+                  <span>Reply</span>
+                </button>
+              )}
+
+              <button className={`comment-action-btn text ${saved ? 'saved' : ''}`} onClick={handleSave}>
+                <Bookmark size={13} fill={saved ? 'currentColor' : 'none'} />
+                <span>{saved ? 'Saved' : 'Save'}</span>
+              </button>
+            </div>
+
+            {replyBox}
+            {children}
+          </>
+        )}
       </div>
     </div>
   );

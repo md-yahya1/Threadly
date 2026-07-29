@@ -44,6 +44,20 @@ export default function CommentSection({ postId, onCommentAdded, onOpenProfile }
     return map;
   }, [comments]);
 
+  // Total nested reply count per comment, used for the "N replies hidden" collapse summary.
+  const descendantCounts = useMemo(() => {
+    const counts = new Map();
+    const countFor = id => {
+      if (counts.has(id)) return counts.get(id);
+      const kids = childrenByParent.get(id) || [];
+      const total = kids.reduce((sum, kid) => sum + 1 + countFor(kid.id), 0);
+      counts.set(id, total);
+      return total;
+    };
+    comments.forEach(c => countFor(c.id));
+    return counts;
+  }, [comments, childrenByParent]);
+
   const submitComment = async (content, parentCommentId) => {
     if (!isAuthenticated) {
       openAuthModal('login');
@@ -94,6 +108,7 @@ export default function CommentSection({ postId, onCommentAdded, onOpenProfile }
         key={c.id}
         comment={c}
         depth={depth}
+        replyCount={descendantCounts.get(c.id) || 0}
         onOpenProfile={onOpenProfile}
         onReplyClick={handleReplyClick}
         replyBox={
