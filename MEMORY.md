@@ -27,13 +27,19 @@ backend/src/main/java/com/forumhub/
     ForumController.java        # ALL endpoints live here (single controller, by design)
     HealthController.java       # GET /api/health
   dto/Requests.java             # ALL request/response records live here (single file)
-  entity/                       # User, Role, Community, Post, Comment, PostVote
+  entity/                       # User, Role, Community, Post, Comment, PostVote, CommentVote,
+                                #   Follow, Notification, SavedPost, SavedComment
+  service/NotificationService.java  # only writer of notifications (follows + replies)
   repository/                   # one interface per entity + Repositories.java (marker/import hub)
   exception/ApiExceptionHandler.java  # @RestControllerAdvice: NoSuchElementException->404,
                                        # MethodArgumentNotValidException->400, Exception->400
 backend/src/main/resources/
   application.yml
-  db/migration/V1__initial_schema.sql   # only migration; full schema incl. bio/avatar_url
+  db/migration/V1__initial_schema.sql   # base schema incl. notifications, comment_votes, saved_posts
+  db/migration/V2__follows_and_optional_community.sql
+  db/migration/V3__karma_notifications_and_saved_comments.sql
+                                        # karma -> post_karma + comment_karma, notifications.actor_id,
+                                        #   saved_comments table, saved/notification indexes
 
 frontend/src/
   App.jsx                       # top-level state: posts, communities, filters, modal toggles
@@ -43,12 +49,13 @@ frontend/src/
     ThemeContext.jsx            # light/dark
     ToastContext.jsx            # addToast(msg, type)
   components/
-    layout/  Header, LeftSidebar, RightSidebar, MobileNav
-    posts/   PostCard, PostSkeleton
-    comments/ CommentSection
-    modals/  AuthModal, CreatePostModal, CreateCommunityModal, AccountSettingsModal
-    common/  Avatar, Toast
-  utils/ avatar.js (initials/color), time.js (relative time)
+    layout/  Header, LeftSidebar, RightSidebar, MobileNav, NotificationsMenu
+    posts/   PostCard, PostSkeleton, PostListItem (compact row used inside modals)
+    comments/ CommentSection (threading + reply box), CommentCard (vote/save, reused by modals)
+    modals/  AuthModal, CreatePostModal, CreateCommunityModal, AccountSettingsModal,
+             UserProfileModal (karma + activity tabs), SavedItemsModal
+    common/  Avatar, Toast, FollowButton
+  utils/ avatar.js (initials/color), time.js (relative time + join date)
 ```
 
 **Convention**: this project deliberately keeps ONE controller and ONE DTO file
@@ -77,6 +84,8 @@ create new controller/DTO files unless asked.
 ```
 permitAll:  /api/health, /api/auth/**
 permitAll:  GET /api/posts/**, GET /api/communities/**, GET /api/comments/**
+authenticated: GET /api/users/me, GET /api/users/me/**
+permitAll:  GET /api/users/*, /followers, /following, /posts, /comments
 authenticated: /api/** (everything else under /api, any method)
 permitAll:  anyRequest() (i.e. SPA static routes)
 ```
@@ -98,20 +107,39 @@ credentials are on.
 | POST | `/communities` | required | name must be unique |
 | GET | `/posts?page&size` | public | paginated, sorted by createdAt desc |
 | POST | `/posts` | required | |
-| POST | `/posts/{id}/vote` | required | body `{value: -1\|0\|1}`, idempotent score diff |
-| GET | `/posts/{id}/comments` | public | |
-| POST | `/posts/{id}/comments` | required | optional `parentCommentId` for nesting |
+| POST | `/posts/{id}/vote` | required | body `{value: -1\|0\|1}`, idempotent score diff, moves author post karma |
+| GET | `/posts/{id}/comments` | public | `CommentResponse` incl. caller's `userVote`/`saved` |
+| POST | `/posts/{id}/comments` | required | optional `parentCommentId`, fires reply notification |
+| POST | `/comments/{id}/vote` | required | same contract as post vote, moves author comment karma |
+| POST/DELETE | `/posts/{id}/save` | required | save/unsave a post |
+| POST/DELETE | `/comments/{id}/save` | required | save/unsave a comment |
+| GET | `/users/me/saved/posts` | required | paginated saved posts |
+| GET | `/users/me/saved/post-ids` | required | ids only, hydrates feed save buttons |
+| GET | `/users/me/saved/comments` | required | paginated saved comments |
+| GET | `/users/{username}` | public | profile, karma split, counts, `isFollowing` |
+| POST/DELETE | `/users/{username}/follow` | required | follow fires a `NEW_FOLLOWER` notification |
+| GET | `/users/{username}/followers`, `/following` | public | paginated `UserSummary` |
+| GET | `/users/{username}/posts`, `/comments` | public | profile activity tabs |
+| GET | `/notifications?page&size` | required | newest first |
+| GET | `/notifications/unread-count` | required | polled by the header bell every 60s |
+| PUT | `/notifications/{id}/read`, `/notifications/read-all` | required | returns remaining unread count |
 
 ## Entities (fields beyond obvious id/timestamps)
-- **User**: `username`, `email`, `passwordHash`, `bio`, `avatarUrl`, `karma`,
-  `status="ACTIVE"`, roles (M2M, eager).
+- **User**: `username`, `email`, `passwordHash`, `bio`, `avatarUrl`, `postKarma`,
+  `commentKarma` (`totalKarma()` sums them; APIs expose the sum as `karma`),
+  `status="ACTIVE"`, roles (M2M, eager). `email`/`passwordHash` are `@JsonIgnore`d
+  because raw `Post` entities are serialised together with their author.
 - **Community**: `name` (unique), `description`, `visibility="PUBLIC"`,
   `iconUrl`, `bannerUrl`, `creator` (User).
 - **Post**: `community`, `author`, `title`, `content`, `postType="TEXT"`,
   `externalUrl`, `score`, `commentCount`, `status`, `locked`.
 - **Comment**: `post`, `parent` (self-ref for nesting), `author`, `content`,
   `score`, `status`, `locked`.
-- **PostVote**: composite key `(userId, postId)`, `value` (byte, -1/0/1).
+- **PostVote** / **CommentVote**: composite key `(userId, postId|commentId)`, `value` (byte, -1/0/1).
+- **Follow**: composite key `(followerId, followingId)`.
+- **Notification**: `recipient`, `actor`, `type` (`NEW_FOLLOWER`/`POST_REPLY`/`COMMENT_REPLY`),
+  `message`, `referenceId` (post id, or actor id for follows), `read`.
+- **SavedPost** / **SavedComment**: composite key `(userId, postId|commentId)` + `createdAt`.
 - **Role**: just `name` (e.g. "USER"), seeded lazily on first register.
 
 ## Frontend patterns to reuse
@@ -151,6 +179,11 @@ Env vars: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`,
 `JWT_EXPIRATION_MINUTES`, `ALLOWED_ORIGINS`, `PORT`.
 
 ## Change log (recent sessions)
+- Added followers/notifications/profiles/karma/saved comments: split karma
+  (`post_karma`/`comment_karma`) driven by post+comment votes, persisted
+  notifications with a 60s-polled header bell, profile modal with activity tabs,
+  saved posts + saved comments (`SavedItemsModal`).
+- Karma never moves for self-votes; notifications are never created for yourself.
 - Added Account Settings feature: profile (bio/avatarUrl) + password change,
   `AccountSettingsModal.jsx`, `GET/PUT /users/me`, `PUT /users/me/password`.
 - Added refresh-token auto-renewal: `JwtTokenProvider` now issues typed
