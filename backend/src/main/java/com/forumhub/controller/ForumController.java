@@ -83,6 +83,34 @@ public class ForumController {
         return ResponseEntity.ok(new AuthResponse(token, u.id, u.username, u.email, "Login successful"));
     }
 
+    @GetMapping("/users/me")
+    public ResponseEntity<?> getCurrentUserProfile(Authentication auth) {
+        User u = getCurrentUser(auth);
+        return ResponseEntity.ok(new UserProfileResponse(
+                u.id, u.username, u.email, u.bio, u.avatarUrl, u.karma, u.createdAt.toString()));
+    }
+
+    @PutMapping("/users/me")
+    public ResponseEntity<?> updateCurrentUserProfile(@Valid @RequestBody UpdateProfileRequest r, Authentication auth) {
+        User u = getCurrentUser(auth);
+        u.bio = r.bio();
+        u.avatarUrl = r.avatarUrl();
+        users.save(u);
+        return ResponseEntity.ok(new UserProfileResponse(
+                u.id, u.username, u.email, u.bio, u.avatarUrl, u.karma, u.createdAt.toString()));
+    }
+
+    @PutMapping("/users/me/password")
+    public ResponseEntity<?> changePassword(@Valid @RequestBody ChangePasswordRequest r, Authentication auth) {
+        User u = getCurrentUser(auth);
+        if (!encoder.matches(r.currentPassword(), u.passwordHash)) {
+            return ResponseEntity.status(400).body(Map.of("message", "Current password is incorrect"));
+        }
+        u.passwordHash = encoder.encode(r.newPassword());
+        users.save(u);
+        return ResponseEntity.ok(Map.of("message", "Password updated successfully"));
+    }
+
     @GetMapping("/communities")
     public List<Community> listCommunities() {
         return communities.findAll();

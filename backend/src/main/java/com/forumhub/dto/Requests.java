@@ -100,5 +100,32 @@ public final class Requests {
     public record VoteRequest(
         int value
     ) {}
+
+    public record UpdateProfileRequest(
+        @Size(max = 300, message = "Bio cannot exceed 300 characters")
+        String bio,
+
+        @Size(max = 500, message = "Avatar URL cannot exceed 500 characters")
+        String avatarUrl
+    ) {}
+
+    public record ChangePasswordRequest(
+        @NotBlank(message = "Current password is required")
+        String currentPassword,
+
+        @NotBlank(message = "New password is required")
+        @Size(min = 8, max = 100, message = "New password must be at least 8 characters long")
+        String newPassword
+    ) {}
+
+    public record UserProfileResponse(
+        Long id,
+        String username,
+        String email,
+        String bio,
+        String avatarUrl,
+        int karma,
+        String createdAt
+    ) {}
 }
 

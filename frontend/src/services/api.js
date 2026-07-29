@@ -117,5 +117,20 @@ export const api = {
     request(`/posts/${postId}/comments`, {
       method: 'POST',
       body: JSON.stringify({ content })
+    }),
+
+  getProfile: () =>
+    request('/users/me'),
+
+  updateProfile: (bio, avatarUrl) =>
+    request('/users/me', {
+      method: 'PUT',
+      body: JSON.stringify({ bio, avatarUrl })
+    }),
+
+  changePassword: (currentPassword, newPassword) =>
+    request('/users/me/password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword })
     })
 };

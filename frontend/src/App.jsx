@@ -13,6 +13,7 @@ import PostSkeleton from './components/posts/PostSkeleton';
 import AuthModal from './components/modals/AuthModal';
 import CreatePostModal from './components/modals/CreatePostModal';
 import CreateCommunityModal from './components/modals/CreateCommunityModal';
+import AccountSettingsModal from './components/modals/AccountSettingsModal';
 
 import { useAuth } from './context/AuthContext';
 import './App.css';
@@ -32,6 +33,7 @@ export default function App() {
   // Modals state
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showCreateCommunity, setShowCreateCommunity] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const { isAuthenticated, openAuthModal } = useAuth();
 
@@ -113,6 +115,7 @@ export default function App() {
         setSearchQuery={setSearchQuery}
         onOpenCreatePost={() => setShowCreatePost(true)}
         onOpenCreateCommunity={() => setShowCreateCommunity(true)}
+        onOpenSettings={() => setShowSettings(true)}
       />
 
       <main className="app-main-layout">
@@ -237,6 +240,10 @@ export default function App() {
         isOpen={showCreateCommunity}
         onClose={() => setShowCreateCommunity(false)}
         onCommunityCreated={loadData}
+      />
+      <AccountSettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
       />
     </div>
   );

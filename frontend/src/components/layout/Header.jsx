@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Sun, Moon, Bell, Plus, LogOut, User, MessageSquare } from 'lucide-react';
+import { Search, Sun, Moon, Bell, Plus, LogOut, User, MessageSquare, Settings } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
 import Avatar from '../common/Avatar';
 import './Header.css';
 
-export default function Header({ searchQuery, setSearchQuery, onOpenCreatePost, onOpenCreateCommunity }) {
+export default function Header({ searchQuery, setSearchQuery, onOpenCreatePost, onOpenCreateCommunity, onOpenSettings }) {
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -63,14 +63,14 @@ export default function Header({ searchQuery, setSearchQuery, onOpenCreatePost, 
         {isAuthenticated ? (
           <div className="user-menu-container" ref={dropdownRef}>
             <button className="user-avatar-btn" onClick={() => setDropdownOpen(!dropdownOpen)}>
-              <Avatar name={user?.username} size="sm" />
+              <Avatar name={user?.username} size="sm" src={user?.avatarUrl} />
               <span className="user-name">u/{user?.username}</span>
             </button>
 
             {dropdownOpen && (
               <div className="user-dropdown">
                 <div className="dropdown-header">
-                  <Avatar name={user?.username} size="md" />
+                  <Avatar name={user?.username} size="md" src={user?.avatarUrl} />
                   <div className="dropdown-user-details">
                     <span className="dropdown-username">u/{user?.username}</span>
                     <span className="dropdown-email">{user?.email}</span>
@@ -86,6 +86,11 @@ export default function Header({ searchQuery, setSearchQuery, onOpenCreatePost, 
                 <button className="dropdown-item" onClick={() => { setDropdownOpen(false); onOpenCreateCommunity(); }}>
                   <Plus size={16} />
                   <span>Create Community</span>
+                </button>
+
+                <button className="dropdown-item" onClick={() => { setDropdownOpen(false); onOpenSettings(); }}>
+                  <Settings size={16} />
+                  <span>Account Settings</span>
                 </button>
 
                 <div className="dropdown-divider" />

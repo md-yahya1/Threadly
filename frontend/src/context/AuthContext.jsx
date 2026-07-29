@@ -60,6 +60,14 @@ export function AuthProvider({ children }) {
     }
   }, [closeAuthModal, addToast]);
 
+  const updateUser = useCallback((patch) => {
+    setUser(prev => {
+      const next = { ...prev, ...patch };
+      setSession(getStoredToken(), next);
+      return next;
+    });
+  }, []);
+
   const logout = useCallback(() => {
     setUser(null);
     setToken('');
@@ -81,7 +89,8 @@ export function AuthProvider({ children }) {
         setAuthMode,
         login,
         register,
-        logout
+        logout,
+        updateUser
       }}
     >
       {children}
