@@ -4,6 +4,7 @@ import com.forumhub.config.JwtTokenProvider;
 import com.forumhub.dto.Requests.*;
 import com.forumhub.entity.*;
 import com.forumhub.repository.*;
+import com.forumhub.service.NotificationService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.*;
 import org.springframework.http.*;
@@ -12,6 +13,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
@@ -23,7 +25,12 @@ public class ForumController {
     private final PostRepository posts;
     private final CommentRepository comments;
     private final PostVoteRepository postVotes;
+    private final CommentVoteRepository commentVotes;
     private final FollowRepository follows;
+    private final SavedPostRepository savedPosts;
+    private final SavedCommentRepository savedComments;
+    private final NotificationRepository notifications;
+    private final NotificationService notifier;
     private final PasswordEncoder encoder;
     private final JwtTokenProvider tokenProvider;
 
@@ -34,7 +41,12 @@ public class ForumController {
             PostRepository p,
             CommentRepository co,
             PostVoteRepository pv,
+            CommentVoteRepository cv,
             FollowRepository f,
+            SavedPostRepository sp,
+            SavedCommentRepository sc,
+            NotificationRepository n,
+            NotificationService ns,
             PasswordEncoder e,
             JwtTokenProvider tp) {
         this.users = u;
@@ -43,7 +55,12 @@ public class ForumController {
         this.posts = p;
         this.comments = co;
         this.postVotes = pv;
+        this.commentVotes = cv;
         this.follows = f;
+        this.savedPosts = sp;
+        this.savedComments = sc;
+        this.notifications = n;
+        this.notifier = ns;
         this.encoder = e;
         this.tokenProvider = tp;
     }
@@ -113,8 +130,7 @@ public class ForumController {
     @GetMapping("/users/me")
     public ResponseEntity<?> getCurrentUserProfile(Authentication auth) {
         User u = getCurrentUser(auth);
-        return ResponseEntity.ok(new UserProfileResponse(
-                u.id, u.username, u.email, u.bio, u.avatarUrl, u.karma, u.createdAt.toString()));
+        return ResponseEntity.ok(toProfileResponse(u));
     }
 
     @PutMapping("/users/me")
@@ -123,8 +139,7 @@ public class ForumController {
         u.bio = r.bio();
         u.avatarUrl = r.avatarUrl();
         users.save(u);
-        return ResponseEntity.ok(new UserProfileResponse(
-                u.id, u.username, u.email, u.bio, u.avatarUrl, u.karma, u.createdAt.toString()));
+        return ResponseEntity.ok(toProfileResponse(u));
     }
 
     @PutMapping("/users/me/password")
@@ -144,8 +159,11 @@ public class ForumController {
         User me = getCurrentUserOrNull(auth);
         boolean isFollowing = me != null && follows.existsByIdFollowerIdAndIdFollowingId(me.id, target.id);
         return ResponseEntity.ok(new PublicProfileResponse(
-                target.id, target.username, target.bio, target.avatarUrl, target.karma,
-                follows.countByIdFollowingId(target.id), follows.countByIdFollowerId(target.id), isFollowing));
+                target.id, target.username, target.bio, target.avatarUrl,
+                target.totalKarma(), target.postKarma, target.commentKarma,
+                posts.countByAuthorId(target.id), comments.countByAuthorId(target.id),
+                follows.countByIdFollowingId(target.id), follows.countByIdFollowerId(target.id),
+                isFollowing, target.createdAt.toString()));
     }
 
     @PostMapping("/users/{username}/follow")
@@ -157,6 +175,7 @@ public class ForumController {
         }
         if (!follows.existsByIdFollowerIdAndIdFollowingId(me.id, target.id)) {
             follows.save(new Follow(me, target));
+            notifier.newFollower(me, target);
         }
         return ResponseEntity.ok(new FollowActionResponse("Following", follows.countByIdFollowingId(target.id)));
     }
@@ -185,6 +204,24 @@ public class ForumController {
         User target = users.findByUsername(username).orElseThrow(() -> new NoSuchElementException("User not found"));
         return follows.findByIdFollowerId(target.id, PageRequest.of(page, Math.min(size, 50)))
                 .map(f -> new UserSummary(f.following.id, f.following.username, f.following.avatarUrl));
+    }
+
+    @GetMapping("/users/{username}/posts")
+    public Page<Post> getUserPosts(@PathVariable String username,
+                                   @RequestParam(defaultValue = "0") int page,
+                                   @RequestParam(defaultValue = "20") int size) {
+        User target = users.findByUsername(username).orElseThrow(() -> new NoSuchElementException("User not found"));
+        return posts.findByAuthorIdOrderByCreatedAtDesc(target.id, PageRequest.of(page, Math.min(size, 50)));
+    }
+
+    @GetMapping("/users/{username}/comments")
+    public Page<CommentResponse> getUserComments(@PathVariable String username,
+                                                 @RequestParam(defaultValue = "0") int page,
+                                                 @RequestParam(defaultValue = "20") int size,
+                                                 Authentication auth) {
+        User target = users.findByUsername(username).orElseThrow(() -> new NoSuchElementException("User not found"));
+        Page<Comment> found = comments.findByAuthorIdOrderByCreatedAtDesc(target.id, PageRequest.of(page, Math.min(size, 50)));
+        return toCommentPage(found, getCurrentUserOrNull(auth));
     }
 
     @GetMapping("/communities")
@@ -253,14 +290,142 @@ public class ForumController {
                 vote.value = (byte) targetValue;
                 postVotes.save(vote);
             }
+
+            awardKarma(post.author, user, diff, true);
         }
 
-        return ResponseEntity.ok(Map.of("postId", post.id, "score", post.score, "userVote", targetValue));
+        return ResponseEntity.ok(new VoteResponse(post.id, post.score, targetValue));
+    }
+
+    @PostMapping("/comments/{id}/vote")
+    public ResponseEntity<?> voteComment(@PathVariable Long id, @RequestBody VoteRequest r, Authentication auth) {
+        User user = getCurrentUser(auth);
+        Comment comment = comments.findById(id).orElseThrow(() -> new NoSuchElementException("Comment not found"));
+
+        int targetValue = Integer.compare(r.value(), 0);
+        Optional<CommentVote> existingOpt = commentVotes.findByIdUserIdAndIdCommentId(user.id, comment.id);
+
+        int oldValue = existingOpt.map(v -> Integer.valueOf(v.value)).orElse(0);
+        int diff = targetValue - oldValue;
+
+        if (diff != 0) {
+            comment.score += diff;
+            comments.save(comment);
+
+            if (targetValue == 0) {
+                existingOpt.ifPresent(commentVotes::delete);
+            } else {
+                CommentVote vote = existingOpt.orElseGet(() -> new CommentVote(user.id, comment.id, targetValue));
+                vote.value = (byte) targetValue;
+                commentVotes.save(vote);
+            }
+
+            awardKarma(comment.author, user, diff, false);
+        }
+
+        return ResponseEntity.ok(new VoteResponse(comment.id, comment.score, targetValue));
+    }
+
+    @PostMapping("/posts/{id}/save")
+    public ResponseEntity<?> savePost(@PathVariable Long id, Authentication auth) {
+        User me = getCurrentUser(auth);
+        Post post = posts.findById(id).orElseThrow(() -> new NoSuchElementException("Post not found"));
+        if (!savedPosts.existsByIdUserIdAndIdPostId(me.id, post.id)) {
+            savedPosts.save(new SavedPost(me, post));
+        }
+        return ResponseEntity.ok(new SaveActionResponse("Post saved", true));
+    }
+
+    @DeleteMapping("/posts/{id}/save")
+    public ResponseEntity<?> unsavePost(@PathVariable Long id, Authentication auth) {
+        User me = getCurrentUser(auth);
+        savedPosts.deleteByIdUserIdAndIdPostId(me.id, id);
+        return ResponseEntity.ok(new SaveActionResponse("Post removed from saved", false));
+    }
+
+    @PostMapping("/comments/{id}/save")
+    public ResponseEntity<?> saveComment(@PathVariable Long id, Authentication auth) {
+        User me = getCurrentUser(auth);
+        Comment comment = comments.findById(id).orElseThrow(() -> new NoSuchElementException("Comment not found"));
+        if (!savedComments.existsByIdUserIdAndIdCommentId(me.id, comment.id)) {
+            savedComments.save(new SavedComment(me, comment));
+        }
+        return ResponseEntity.ok(new SaveActionResponse("Comment saved", true));
+    }
+
+    @DeleteMapping("/comments/{id}/save")
+    public ResponseEntity<?> unsaveComment(@PathVariable Long id, Authentication auth) {
+        User me = getCurrentUser(auth);
+        savedComments.deleteByIdUserIdAndIdCommentId(me.id, id);
+        return ResponseEntity.ok(new SaveActionResponse("Comment removed from saved", false));
+    }
+
+    @GetMapping("/users/me/saved/posts")
+    public Page<Post> listSavedPosts(@RequestParam(defaultValue = "0") int page,
+                                     @RequestParam(defaultValue = "20") int size,
+                                     Authentication auth) {
+        User me = getCurrentUser(auth);
+        return savedPosts.findByIdUserIdOrderByCreatedAtDesc(me.id, PageRequest.of(page, Math.min(size, 50)))
+                .map(s -> s.post);
+    }
+
+    @GetMapping("/users/me/saved/post-ids")
+    public List<Long> listSavedPostIds(Authentication auth) {
+        User me = getCurrentUser(auth);
+        return savedPosts.findByIdUserIdOrderByCreatedAtDesc(me.id, Pageable.unpaged())
+                .map(s -> s.id.postId)
+                .getContent();
+    }
+
+    @GetMapping("/users/me/saved/comments")
+    public Page<CommentResponse> listSavedComments(@RequestParam(defaultValue = "0") int page,
+                                                   @RequestParam(defaultValue = "20") int size,
+                                                   Authentication auth) {
+        User me = getCurrentUser(auth);
+        Page<Comment> found = savedComments
+                .findByIdUserIdOrderByCreatedAtDesc(me.id, PageRequest.of(page, Math.min(size, 50)))
+                .map(s -> s.comment);
+        return toCommentPage(found, me);
+    }
+
+    @GetMapping("/notifications")
+    public Page<NotificationResponse> listNotifications(@RequestParam(defaultValue = "0") int page,
+                                                        @RequestParam(defaultValue = "20") int size,
+                                                        Authentication auth) {
+        User me = getCurrentUser(auth);
+        return notifications.findByRecipientIdOrderByCreatedAtDesc(me.id, PageRequest.of(page, Math.min(size, 50)))
+                .map(n -> new NotificationResponse(
+                        n.id, n.type, n.message, n.referenceId, n.read, n.createdAt.toString(),
+                        n.actor == null ? null : new UserSummary(n.actor.id, n.actor.username, n.actor.avatarUrl)));
+    }
+
+    @GetMapping("/notifications/unread-count")
+    public UnreadCountResponse countUnreadNotifications(Authentication auth) {
+        User me = getCurrentUser(auth);
+        return new UnreadCountResponse(notifications.countByRecipientIdAndReadFalse(me.id));
+    }
+
+    @PutMapping("/notifications/{id}/read")
+    public ResponseEntity<?> markNotificationRead(@PathVariable Long id, Authentication auth) {
+        User me = getCurrentUser(auth);
+        Notification n = notifications.findById(id)
+                .filter(found -> found.recipient.id.equals(me.id))
+                .orElseThrow(() -> new NoSuchElementException("Notification not found"));
+        n.read = true;
+        notifications.save(n);
+        return ResponseEntity.ok(new UnreadCountResponse(notifications.countByRecipientIdAndReadFalse(me.id)));
+    }
+
+    @PutMapping("/notifications/read-all")
+    public ResponseEntity<?> markAllNotificationsRead(Authentication auth) {
+        User me = getCurrentUser(auth);
+        notifications.markAllReadForUser(me.id);
+        return ResponseEntity.ok(new UnreadCountResponse(0));
     }
 
     @GetMapping("/posts/{id}/comments")
-    public List<Comment> listComments(@PathVariable Long id) {
-        return comments.findByPostIdOrderByCreatedAtAsc(id);
+    public List<CommentResponse> listComments(@PathVariable Long id, Authentication auth) {
+        return toCommentResponses(comments.findByPostIdOrderByCreatedAtAsc(id), getCurrentUserOrNull(auth));
     }
 
     @PostMapping("/posts/{id}/comments")
@@ -278,6 +443,69 @@ public class ForumController {
 
         p.commentCount++;
         posts.save(p);
-        return ResponseEntity.status(201).body(comments.save(c));
+        comments.save(c);
+
+        if (c.parent != null) {
+            notifier.commentReply(author, c.parent, c);
+        } else {
+            notifier.postReply(author, p, c);
+        }
+
+        return ResponseEntity.status(201).body(toCommentResponses(List.of(c), author).get(0));
+    }
+
+    private UserProfileResponse toProfileResponse(User u) {
+        return new UserProfileResponse(u.id, u.username, u.email, u.bio, u.avatarUrl,
+                u.totalKarma(), u.postKarma, u.commentKarma, u.createdAt.toString());
+    }
+
+    /** Votes on your own content are free, so they never move karma. */
+    private void awardKarma(User author, User voter, int diff, boolean forPost) {
+        if (author == null || author.id.equals(voter.id)) {
+            return;
+        }
+        if (forPost) {
+            author.postKarma += diff;
+        } else {
+            author.commentKarma += diff;
+        }
+        users.save(author);
+    }
+
+    private Page<CommentResponse> toCommentPage(Page<Comment> page, User me) {
+        return new PageImpl<>(toCommentResponses(page.getContent(), me), page.getPageable(), page.getTotalElements());
+    }
+
+    private List<CommentResponse> toCommentResponses(List<Comment> found, User me) {
+        if (found.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, Integer> votes = Map.of();
+        Set<Long> saved = Set.of();
+        if (me != null) {
+            List<Long> ids = found.stream().map(c -> c.id).toList();
+            votes = commentVotes.findByIdUserIdAndIdCommentIdIn(me.id, ids).stream()
+                    .collect(Collectors.toMap(v -> v.id.commentId, v -> (int) v.value));
+            saved = savedComments.findByIdUserIdAndIdCommentIdIn(me.id, ids).stream()
+                    .map(s -> s.id.commentId)
+                    .collect(Collectors.toSet());
+        }
+
+        Map<Long, Integer> myVotes = votes;
+        Set<Long> mySaved = saved;
+        return found.stream()
+                .map(c -> new CommentResponse(
+                        c.id,
+                        c.post == null ? null : c.post.id,
+                        c.post == null ? null : c.post.title,
+                        c.parent == null ? null : c.parent.id,
+                        c.content,
+                        c.score,
+                        myVotes.getOrDefault(c.id, 0),
+                        mySaved.contains(c.id),
+                        c.createdAt.toString(),
+                        c.author == null ? null : new UserSummary(c.author.id, c.author.username, c.author.avatarUrl)))
+                .toList();
     }
 }
