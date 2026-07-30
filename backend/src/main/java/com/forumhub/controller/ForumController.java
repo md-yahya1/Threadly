@@ -268,6 +268,34 @@ public class ForumController {
         return ResponseEntity.status(201).body(posts.save(p));
     }
 
+    @PutMapping("/posts/{id}")
+    public ResponseEntity<?> updatePost(@PathVariable Long id, @Valid @RequestBody PostUpdate r, Authentication auth) {
+        User user = getCurrentUser(auth);
+        Post post = posts.findById(id).orElseThrow(() -> new NoSuchElementException("Post not found"));
+
+        if (!post.author.id.equals(user.id)) {
+            return ResponseEntity.status(403).body(Map.of("message", "You can only edit your own posts"));
+        }
+
+        post.title = r.title();
+        post.content = r.content();
+        post.externalUrl = r.externalUrl();
+        return ResponseEntity.ok(posts.save(post));
+    }
+
+    @DeleteMapping("/posts/{id}")
+    public ResponseEntity<?> deletePost(@PathVariable Long id, Authentication auth) {
+        User user = getCurrentUser(auth);
+        Post post = posts.findById(id).orElseThrow(() -> new NoSuchElementException("Post not found"));
+
+        if (!post.author.id.equals(user.id)) {
+            return ResponseEntity.status(403).body(Map.of("message", "You can only delete your own posts"));
+        }
+
+        posts.delete(post);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/posts/{id}/vote")
     public ResponseEntity<?> votePost(@PathVariable Long id, @RequestBody VoteRequest r, Authentication auth) {
         User user = getCurrentUser(auth);

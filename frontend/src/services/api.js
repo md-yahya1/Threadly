@@ -168,6 +168,15 @@ export const api = {
       body: JSON.stringify(data)
     }),
 
+  updatePost: (postId, data) =>
+    request(`/posts/${postId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    }),
+
+  deletePost: (postId) =>
+    request(`/posts/${postId}`, { method: 'DELETE' }),
+
   votePost: (postId, value) =>
     request(`/posts/${postId}/vote`, {
       method: 'POST',

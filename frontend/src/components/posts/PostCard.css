@@ -225,3 +225,142 @@
     box-shadow: 0 0 0 3px transparent;
   }
 }
+
+/* ============================================================
+   Post options: edit / delete dropdown, inline edit form,
+   and delete confirmation.
+   ============================================================ */
+
+.post-more-wrap {
+  position: relative;
+}
+
+.post-options-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 160px;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: postMenuIn 0.14s ease-out;
+}
+
+@keyframes postMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.post-options-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  text-align: left;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.post-options-item:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+}
+
+.post-options-item.danger {
+  color: var(--downvote-color, #e03131);
+}
+
+.post-options-item.danger:hover {
+  background-color: var(--downvote-bg, rgba(224, 49, 49, 0.1));
+  color: var(--downvote-color, #e03131);
+}
+
+.post-delete-confirm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--downvote-color, #e03131);
+  background-color: var(--downvote-bg, rgba(224, 49, 49, 0.08));
+  font-size: 13px;
+  color: var(--color-text-primary);
+  animation: postMenuIn 0.14s ease-out;
+}
+
+.post-delete-confirm-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-danger {
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  background-color: var(--downvote-color, #e03131);
+  transition: filter var(--transition-fast), transform var(--transition-fast);
+}
+
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.post-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-surface-hover);
+  animation: postMenuIn 0.14s ease-out;
+}
+
+.post-edit-title {
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.post-edit-body {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.post-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.post-edit-actions .btn-primary,
+.post-edit-actions .btn-secondary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

@@ -94,6 +94,15 @@ public final class Requests {
         String externalUrl
     ) {}
 
+    public record PostUpdate(
+        @NotBlank(message = "Title is required")
+        @Size(max = 300, message = "Title cannot exceed 300 characters")
+        String title,
+
+        String content,
+        String externalUrl
+    ) {}
+
     public record CommentCreate(
         @NotBlank(message = "Comment content cannot be blank")
         @Size(max = 10000, message = "Comment content cannot exceed 10000 characters")

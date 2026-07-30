@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { Sparkles, Plus, Flame, Clock, TrendingUp, X } from 'lucide-react';
+import { Sparkles, Plus, Flame, Clock, TrendingUp, X, Home, Compass, Users, User } from 'lucide-react';
 import { api } from './services/api';
 
 import Header from './components/layout/Header';
 import LeftSidebar from './components/layout/LeftSidebar';
 import RightSidebar from './components/layout/RightSidebar';
 import MobileNav from './components/layout/MobileNav';
+import Dock from './components/common/Dock';
 
 import PostCard from './components/posts/PostCard';
 import PostSkeleton from './components/posts/PostSkeleton';
@@ -40,7 +41,7 @@ export default function App() {
   const [profileUsername, setProfileUsername] = useState(null);
   const [savedPostIds, setSavedPostIds] = useState([]);
 
-  const { isAuthenticated, openAuthModal } = useAuth();
+  const { isAuthenticated, openAuthModal, user } = useAuth();
 
   const loadData = () => {
     setLoadingPosts(true);
@@ -228,6 +229,14 @@ export default function App() {
                     prev.map(p => (p.id === post.id ? { ...p, commentCount: p.commentCount + 1 } : p))
                   );
                 }}
+                onPostUpdated={(postId, updated) => {
+                  setPosts(prev =>
+                    prev.map(p => (p.id === postId ? { ...p, ...updated } : p))
+                  );
+                }}
+                onPostDeleted={(postId) => {
+                  setPosts(prev => prev.filter(p => p.id !== postId));
+                }}
               />
             ))
           ) : (
@@ -265,6 +274,29 @@ export default function App() {
         setActiveTab={setActiveTab}
         onOpenCreatePost={() => setShowCreatePost(true)}
         onOpenCreateCommunity={() => setShowCreateCommunity(true)}
+      />
+
+      {/* Desktop Floating Dock */}
+      <Dock
+        items={[
+          { icon: Home, label: 'Home', active: activeTab === 'Home', onClick: () => setActiveTab('Home') },
+          { icon: Compass, label: 'Explore', active: activeTab === 'Explore', onClick: () => setActiveTab('Explore') },
+          {
+            icon: Plus,
+            label: 'Create Post',
+            onClick: () => (isAuthenticated ? setShowCreatePost(true) : openAuthModal('login'))
+          },
+          {
+            icon: Users,
+            label: 'New Community',
+            onClick: () => (isAuthenticated ? setShowCreateCommunity(true) : openAuthModal('login'))
+          },
+          {
+            icon: User,
+            label: isAuthenticated ? 'Profile' : 'Account',
+            onClick: () => (isAuthenticated ? setProfileUsername(user.username) : openAuthModal('login'))
+          }
+        ]}
       />
 
       {/* Modals */}

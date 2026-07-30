@@ -1,0 +1,94 @@
+.dock-wrap {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 20px;
+  z-index: 900;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.dock {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border-radius: var(--radius-full, 999px);
+  border: 1px solid var(--color-border);
+  background-color: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.16));
+  animation: dockFloat 4s ease-in-out infinite;
+  transition: box-shadow 0.3s ease;
+}
+
+.dock:hover {
+  box-shadow: var(--shadow-lg, 0 12px 32px rgba(0, 0, 0, 0.22));
+}
+
+@keyframes dockFloat {
+  0%, 100% { transform: translateY(-2px); }
+  50% { transform: translateY(2px); }
+}
+
+.dock-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  transition: transform 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+}
+
+.dock-item:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text-primary);
+  transform: translateY(-3px) scale(1.08);
+}
+
+.dock-item:active {
+  transform: translateY(-1px) scale(0.95);
+}
+
+.dock-item.active {
+  color: var(--color-primary-hover);
+  background-color: var(--color-primary-light);
+}
+
+.dock-icon {
+  pointer-events: none;
+}
+
+.dock-tooltip {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-text-primary);
+  color: var(--color-background, #fff);
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.dock-item:hover .dock-tooltip {
+  opacity: 1;
+}
+
+/* Desktop-only: MobileNav already covers small viewports */
+@media (max-width: 800px) {
+  .dock-wrap {
+    display: none;
+  }
+}
