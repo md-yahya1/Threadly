@@ -4,3 +4,6 @@ frontend/dist/
 backend/.env
 .idea/
 backend/src/main/resources/static/
+
+
+frontend/.env
